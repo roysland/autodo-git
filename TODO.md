@@ -30,9 +30,9 @@ Track the implementation status and priorities of the Git helper utilities. Run 
 
 ## Medium Priority
 
-- [ ] **`git-intent`** (Context / Goal Recovery)
+- [x] **`git-intent`** (Context / Goal Recovery)
   - *Description*: Queries the local LLM to describe what you were trying to accomplish with the current changes based on the diff.
-  - *Proposed Testing*: `./autodo git-intent`
+  - *Testing*: Run `./autodo git-intent`
 
 - [ ] **`git-split`** (Standalone Splitter)
   - *Description*: Standalone command to run the cluster-by-cluster staging and committing workflow directly from the shell.
