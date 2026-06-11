@@ -22,9 +22,9 @@ Track the implementation status and priorities of the Git helper utilities. Run 
   - *Description*: Analyzes repository state (unstaged, staged, local commits, pushed commits) and suggests the safest command to revert the last actions.
   - *Testing*: Run `./autodo git-undo-suggest`
 
-- [ ] **`git-continue`** (Resume Conflict Resolution)
+- [x] **`git-continue`** (Resume Conflict Resolution)
   - *Description*: Detects if you are in the middle of a rebase, merge, or cherry-pick conflict, reads the state, and tells you exactly what step to run next.
-  - *Proposed Testing*: `./autodo git-continue`
+  - *Testing*: Run `./autodo git-continue`
 
 ---
 
