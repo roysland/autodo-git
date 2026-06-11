@@ -18,9 +18,9 @@ Track the implementation status and priorities of the Git helper utilities. Run 
   - *Description*: Runs local AI analysis on the current diff to inspect code quality, detect security risks/secrets, find debug leftovers, and suggest refactors.
   - *Testing*: Run `./autodo git-review` or `./autodo git-review <diff-arguments>`
 
-- [ ] **`git-undo-suggest`** (Risk-Free Git Undo)
+- [x] **`git-undo-suggest`** (Risk-Free Git Undo)
   - *Description*: Analyzes repository state (unstaged, staged, local commits, pushed commits) and suggests the safest command to revert the last actions.
-  - *Proposed Testing*: `./autodo git-undo-suggest`
+  - *Testing*: Run `./autodo git-undo-suggest`
 
 - [ ] **`git-continue`** (Resume Conflict Resolution)
   - *Description*: Detects if you are in the middle of a rebase, merge, or cherry-pick conflict, reads the state, and tells you exactly what step to run next.
