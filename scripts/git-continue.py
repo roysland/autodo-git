@@ -325,7 +325,7 @@ def main():
         if status["staged"] or status["unstaged"]:
             options.append({
                 "title": "Commit current changes",
-                "cmd": ["autodo", "run", "create-commit-message"],
+                "cmd": ["autodo-git", "run", "create-commit-message"],
                 "desc": "Runs commit assistant to save your work.",
                 "action": "run"
             })

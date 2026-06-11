@@ -4,10 +4,10 @@ set -e
 # Target directory
 BIN_DIR="$HOME/.local/bin"
 AUTODO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SOURCE_PATH="$AUTODO_ROOT/autodo"
-TARGET_PATH="$BIN_DIR/autodo"
+SOURCE_PATH="$AUTODO_ROOT/autodo-git"
+TARGET_PATH="$BIN_DIR/autodo-git"
 
-echo -e "\033[1;35mInstalling autodo...\033[0m"
+echo -e "\033[1;35mInstalling autodo-git...\033[0m"
 
 # Ensure bin directory exists
 if [ ! -d "$BIN_DIR" ]; then
@@ -31,7 +31,7 @@ echo -e "\n\033[1;32mInstallation successful!\033[0m"
 
 # Check if BIN_DIR is in PATH
 if [[ ":$PATH:" == *":$BIN_DIR:"* ]]; then
-    echo -e "You can now run \033[1;36mautodo\033[0m from any terminal directory!"
+    echo -e "You can now run \033[1;36mautodo-git\033[0m from any terminal directory!"
 else
     echo -e "\033[1;33mWarning:\033[0m $BIN_DIR is not in your PATH."
     echo "Please add the following line to your shell configuration file (e.g. ~/.bashrc, ~/.zshrc):"

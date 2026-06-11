@@ -235,14 +235,14 @@ def find_matches(query, scripts):
 
 def print_help():
     help_text = """\033[1;35mUsage:\033[0m
-  autodo                  Launch the interactive TUI menu
-  autodo list             List all available scripts in the repository
-  autodo run <script>     Run a script (supports fuzzy name matching)
-  autodo help             Show this help guide
+  autodo-git                  Launch the interactive TUI menu
+  autodo-git list             List all available scripts in the repository
+  autodo-git run <script>     Run a script (supports fuzzy name matching)
+  autodo-git help             Show this help guide
 
 \033[1;35mExamples:\033[0m
-  autodo run commit
-  autodo run create-commit-message --amend
+  autodo-git run commit
+  autodo-git run create-commit-message --amend
 """
     print(help_text)
 
@@ -308,7 +308,7 @@ def run_tui(scripts):
             lines = []
             lines.append("\033[H") # Move cursor to home
             lines.append("\033[1;35m====================================================\033[0m")
-            lines.append("\033[1;97m              autodo - Repo Script Runner           \033[0m")
+            lines.append("\033[1;97m            autodo-git - Repo Script Runner         \033[0m")
             lines.append("\033[1;35m====================================================\033[0m")
             lines.append("")
             lines.append("\033[1;90mSelect a script using Up/Down and press Enter:\033[0m")
@@ -408,7 +408,7 @@ def main():
             rc = run_script(matches[0], extra_args)
             sys.exit(rc)
     else:
-        # Assume run by default if we type: autodo commit
+        # Assume run by default if we type: autodo-git commit
         # (This makes it even more user friendly!)
         script_name = sys.argv[1]
         extra_args = sys.argv[2:]
