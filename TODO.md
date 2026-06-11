@@ -38,9 +38,9 @@ Track the implementation status and priorities of the Git helper utilities. Run 
   - *Description*: Standalone command to run the cluster-by-cluster staging and committing workflow directly from the shell.
   - *Proposed Testing*: `./autodo git-split`
 
-- [ ] **`git-branch-name`** (Pipelineable Branch Name Generator)
+- [x] **`git-branch-name`** (Pipelineable Branch Name Generator)
   - *Description*: Generates a kebab-case branch name based on current changes and prints only the string to stdout (ideal for shell piping).
-  - *Proposed Testing*: `git checkout -b $(autodo git-branch-name)`
+  - *Testing*: `git checkout -b $(autodo git-branch-name)`
 
 - [ ] **`git-cleanup`** (Housekeeping Assistant)
   - *Description*: Interactively prunes merged local branches, old stashes, untracked garbage, and conflict leftover files.
