@@ -42,9 +42,9 @@ Track the implementation status and priorities of the Git helper utilities. Run 
   - *Description*: Generates a kebab-case branch name based on current changes and prints only the string to stdout (ideal for shell piping).
   - *Testing*: `git checkout -b $(autodo git-branch-name)`
 
-- [ ] **`git-cleanup`** (Housekeeping Assistant)
+- [x] **`git-cleanup`** (Housekeeping Assistant)
   - *Description*: Interactively prunes merged local branches, old stashes, untracked garbage, and conflict leftover files.
-  - *Proposed Testing*: `./autodo git-cleanup`
+  - *Testing*: Run `./autodo git-cleanup`
 
 ---
 
