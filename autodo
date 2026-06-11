@@ -1,0 +1,425 @@
+#!/usr/bin/env python3
+import os
+import sys
+import re
+import shutil
+import subprocess
+import pathlib
+import select
+import termios
+import tty
+
+SCRIPTS_DIR = pathlib.Path(__file__).resolve().parent / "scripts"
+
+def extract_description(path):
+    desc = "No description provided."
+    if path.is_dir():
+        readme = path / "README.md"
+        if readme.is_file():
+            try:
+                lines = readme.read_text().splitlines()
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        return line[:100] + "..." if len(line) > 100 else line
+            except Exception:
+                pass
+        
+        entrypoints = ["run", "main.py", "index.ts", "index.js", "main.sh"]
+        for ep in entrypoints:
+            ep_file = path / ep
+            if ep_file.is_file():
+                return extract_description(ep_file)
+        
+        matching = list(path.glob(f"{path.name}.*"))
+        if matching:
+            return extract_description(matching[0])
+            
+        return desc
+
+    # It's a file
+    try:
+        content = path.read_text(errors='ignore')
+        # Check for explicit Description tag
+        m = re.search(r'(?:#|//|--)\s*Description:\s*(.*)', content, re.IGNORECASE)
+        if m:
+            return m.group(1).strip()
+            
+        if path.suffix == ".py":
+            m_doc = re.search(r'^\s*"""(.*?)"""', content, re.DOTALL | re.MULTILINE)
+            if m_doc:
+                first_line = m_doc.group(1).strip().split('\n')[0].strip()
+                if first_line:
+                    return first_line
+        
+        # Parse first comment block
+        lines = content.splitlines()
+        comment_lines = []
+        for line in lines[:10]:
+            line = line.strip()
+            if line.startswith('#') or line.startswith('//'):
+                clean = line.lstrip('#/').strip()
+                if clean and not clean.startswith('!/bin/'):
+                    comment_lines.append(clean)
+            elif not line:
+                continue
+            else:
+                break
+        if comment_lines:
+            joined = " ".join(comment_lines)
+            return joined[:100] + "..." if len(joined) > 100 else joined
+    except Exception:
+        pass
+    return desc
+
+def discover_scripts():
+    scripts = []
+    if not SCRIPTS_DIR.exists():
+        return scripts
+        
+    for item in sorted(SCRIPTS_DIR.iterdir()):
+        if item.name.startswith('.'):
+            continue
+            
+        script_info = {
+            "name": item.stem if item.is_file() else item.name,
+            "path": item,
+            "is_dir": item.is_dir(),
+            "type": None,
+            "description": "No description provided."
+        }
+        
+        if item.is_file():
+            ext = item.suffix.lower()
+            if ext == ".sh":
+                script_info["type"] = "bash"
+            elif ext == ".py":
+                script_info["type"] = "python"
+            elif ext == ".ts":
+                script_info["type"] = "bun"
+            elif ext == ".js":
+                script_info["type"] = "node"
+            else:
+                continue
+        else:
+            # Check for folder entrypoint
+            entrypoints = ["run", "main.py", "index.ts", "index.js", "main.sh"]
+            found = False
+            for ep in entrypoints:
+                if (item / ep).is_file():
+                    found = True
+                    ep_ext = (item / ep).suffix.lower()
+                    if ep_ext == ".py":
+                        script_info["type"] = "python"
+                    elif ep_ext == ".sh" or ep == "run":
+                        script_info["type"] = "bash"
+                    elif ep_ext == ".ts":
+                        script_info["type"] = "bun"
+                    elif ep_ext == ".js":
+                        script_info["type"] = "node"
+                    break
+            
+            if not found:
+                matching = list(item.glob(f"{item.name}.*"))
+                if matching:
+                    ep_ext = matching[0].suffix.lower()
+                    if ep_ext == ".py":
+                        script_info["type"] = "python"
+                    elif ep_ext == ".sh":
+                        script_info["type"] = "bash"
+                    elif ep_ext == ".ts":
+                        script_info["type"] = "bun"
+                    elif ep_ext == ".js":
+                        script_info["type"] = "node"
+                    found = True
+                    
+            if not found:
+                continue
+                
+        script_info["description"] = extract_description(item)
+        scripts.append(script_info)
+        
+    return scripts
+
+def run_script(script, extra_args=[]):
+    path = script["path"]
+    is_dir = script["is_dir"]
+    script_type = script["type"]
+    
+    cmd = []
+    
+    if not is_dir:
+        if script_type == "bash":
+            cmd = ["bash", str(path)]
+        elif script_type == "python":
+            cmd = ["python3", str(path)]
+        elif script_type == "bun":
+            cmd = ["bun", str(path)]
+        elif script_type == "node":
+            cmd = ["bun" if shutil.which("bun") else "node", str(path)]
+    else:
+        # Directory runner
+        if (path / "package.json").is_file():
+            runner = "bun" if shutil.which("bun") else "npm"
+            cmd = [runner, "run", "start"]
+        else:
+            entrypoints = ["run", "main.py", "index.ts", "index.js", "main.sh"]
+            ep_file = None
+            for ep in entrypoints:
+                if (path / ep).is_file():
+                    ep_file = path / ep
+                    break
+            
+            if not ep_file:
+                matching = list(path.glob(f"{path.name}.*"))
+                if matching:
+                    ep_file = matching[0]
+            
+            if ep_file:
+                ep_ext = ep_file.suffix.lower()
+                if ep_ext == ".py" or ep_file.name == "main.py":
+                    cmd = ["python3", str(ep_file)]
+                elif ep_ext == ".sh" or ep_file.name == "main.sh" or ep_file.name == "run":
+                    cmd = ["bash", str(ep_file)]
+                elif ep_ext == ".ts":
+                    cmd = ["bun", str(ep_file)]
+                elif ep_ext == ".js":
+                    cmd = ["bun" if shutil.which("bun") else "node", str(ep_file)]
+            
+    if not cmd:
+        print(f"\033[1;31mError:\033[0m Could not resolve execution entrypoint for script '{script['name']}'.")
+        return 1
+        
+    cmd.extend(extra_args)
+    
+    cwd = str(path) if is_dir else os.getcwd()
+    
+    # Check if executable script exists directly and configure chmod
+    if cmd[0] not in ["bash", "python3", "bun", "node", "npm"]:
+        try:
+            os.chmod(cmd[0], os.stat(cmd[0]).st_mode | 0o111)
+        except Exception:
+            pass
+            
+    print(f"\033[1;35m>>> Executing:\033[0m {' '.join(cmd)}\n")
+    try:
+        res = subprocess.run(cmd, cwd=cwd)
+        return res.returncode
+    except KeyboardInterrupt:
+        print("\n\033[1;33mExecution interrupted.\033[0m")
+        return 130
+    except Exception as e:
+        print(f"\n\033[1;31mError running script:\033[0m {e}")
+        return 1
+
+def find_matches(query, scripts):
+    query_lower = query.lower()
+    exact = []
+    prefix = []
+    fuzzy = []
+    
+    for s in scripts:
+        name_lower = s["name"].lower()
+        if name_lower == query_lower:
+            exact.append(s)
+        elif name_lower.startswith(query_lower):
+            prefix.append(s)
+        elif query_lower in name_lower:
+            fuzzy.append(s)
+            
+    if exact:
+        return exact
+    if prefix:
+        return prefix
+    return fuzzy
+
+def print_help():
+    help_text = """\033[1;35mUsage:\033[0m
+  autodo                  Launch the interactive TUI menu
+  autodo list             List all available scripts in the repository
+  autodo run <script>     Run a script (supports fuzzy name matching)
+  autodo help             Show this help guide
+
+\033[1;35mExamples:\033[0m
+  autodo run commit
+  autodo run create-commit-message --amend
+"""
+    print(help_text)
+
+def do_list(scripts):
+    if not scripts:
+        print("No scripts found in scripts/ directory.")
+        return
+        
+    print(f"\033[1;35m{'SCRIPT NAME':<25} {'TYPE':<8} {'DESCRIPTION'}\033[0m")
+    print(f"\033[1;35m{'-'*25:<25} {'-'*8:<8} {'-'*40}\033[0m")
+    for s in scripts:
+        type_colors = {
+            "bash": "\033[32m",
+            "python": "\033[34m",
+            "bun": "\033[33m",
+            "node": "\033[33m"
+        }
+        color = type_colors.get(s["type"], "\033[37m")
+        print(f"{s['name']:<25} {color}{s['type']:<8}\033[0m {s['description']}")
+
+def get_key():
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(sys.stdin.fileno())
+        ch = sys.stdin.read(1)
+        if ch == '\x1b':
+            r, _, _ = select.select([sys.stdin], [], [], 0.05)
+            if r:
+                ch2 = sys.stdin.read(1)
+                if ch2 == '[':
+                    ch3 = sys.stdin.read(1)
+                    if ch3 == 'A': return 'up'
+                    elif ch3 == 'B': return 'down'
+                    elif ch3 == 'C': return 'right'
+                    elif ch3 == 'D': return 'left'
+            return 'exit'
+        elif ch == '\r' or ch == '\n':
+            return 'enter'
+        elif ch == 'q' or ch == 'Q':
+            return 'exit'
+        return ch
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+def run_tui(scripts):
+    if not scripts:
+        print("No scripts found in scripts/ directory.")
+        return
+        
+    selected_idx = 0
+    # Clear screen initially
+    sys.stdout.write("\033[2J\033[H")
+    sys.stdout.flush()
+    
+    # Hide cursor
+    sys.stdout.write("\033[?25l")
+    sys.stdout.flush()
+    
+    try:
+        while True:
+            # Draw
+            lines = []
+            lines.append("\033[H") # Move cursor to home
+            lines.append("\033[1;35m====================================================\033[0m")
+            lines.append("\033[1;97m              autodo - Repo Script Runner           \033[0m")
+            lines.append("\033[1;35m====================================================\033[0m")
+            lines.append("")
+            lines.append("\033[1;90mSelect a script using Up/Down and press Enter:\033[0m")
+            lines.append("")
+            
+            for idx, s in enumerate(scripts):
+                type_colors = {
+                    "bash": "\033[32m",
+                    "python": "\033[34m",
+                    "bun": "\033[33m",
+                    "node": "\033[33m"
+                }
+                color = type_colors.get(s["type"], "\033[37m")
+                
+                if idx == selected_idx:
+                    lines.append(f" \033[1;96m▶  {s['name']:<25}\033[0m  [{color}{s['type']}\033[0m]")
+                else:
+                    lines.append(f"    \033[2;37m{s['name']:<25}\033[0m  [{color}{s['type']}\033[0m]")
+            
+            # Pad empty space if needed so it clears former long lists
+            lines.append("")
+            lines.append("\033[1;35m----------------------------------------------------\033[0m")
+            lines.append("\033[1;97mDescription:\033[0m")
+            selected_desc = scripts[selected_idx]["description"]
+            # Wrap description in neat formatting
+            lines.append(f"  \033[3m{selected_desc}\033[0m")
+            lines.append("\033[1;35m----------------------------------------------------\033[0m")
+            lines.append("\033[90m[↑/↓] Navigate   [Enter] Run   [q/Esc] Exit\033[0m")
+            
+            # Write layout to stdout
+            sys.stdout.write("\n".join(lines) + "\033[J\n")
+            sys.stdout.flush()
+            
+            # Input
+            key = get_key()
+            if key == 'up':
+                selected_idx = (selected_idx - 1) % len(scripts)
+            elif key == 'down':
+                selected_idx = (selected_idx + 1) % len(scripts)
+            elif key == 'enter':
+                # Show cursor back before executing
+                sys.stdout.write("\033[?25h")
+                # Clear TUI screen and position cursor
+                sys.stdout.write("\033[2J\033[H")
+                sys.stdout.flush()
+                
+                # Run selected script
+                rc = run_script(scripts[selected_idx])
+                
+                print(f"\n\033[1;90mProcess exited with code {rc}. Press any key to return to menu...\033[0m")
+                get_key()
+                
+                # Clear and hide cursor for returning to TUI
+                sys.stdout.write("\033[2J\033[H\033[?25l")
+                sys.stdout.flush()
+            elif key == 'exit':
+                break
+    finally:
+        # Ensure cursor is always restored on exit
+        sys.stdout.write("\033[?25h\033[2J\033[H")
+        sys.stdout.flush()
+
+def main():
+    scripts = discover_scripts()
+    
+    if len(sys.argv) < 2:
+        run_tui(scripts)
+        return
+        
+    cmd = sys.argv[1].lower()
+    
+    if cmd in ["help", "-h", "--help"]:
+        print_help()
+    elif cmd == "list":
+        do_list(scripts)
+    elif cmd == "run":
+        if len(sys.argv) < 3:
+            print("\033[1;31mError:\033[0m Script name required for 'run' command.")
+            print_help()
+            sys.exit(1)
+            
+        script_name = sys.argv[2]
+        extra_args = sys.argv[3:]
+        
+        matches = find_matches(script_name, scripts)
+        
+        if not matches:
+            print(f"\033[1;31mError:\033[0m No script matches '{script_name}'.")
+            sys.exit(1)
+        elif len(matches) > 1:
+            print(f"\033[1;33mWarning:\033[0m Multiple matches found for '{script_name}':")
+            for idx, m in enumerate(matches):
+                print(f"  [{idx + 1}] {m['name']} ({m['type']})")
+            print("\nPlease refine the script name to run.")
+            sys.exit(1)
+        else:
+            rc = run_script(matches[0], extra_args)
+            sys.exit(rc)
+    else:
+        # Assume run by default if we type: autodo commit
+        # (This makes it even more user friendly!)
+        script_name = sys.argv[1]
+        extra_args = sys.argv[2:]
+        matches = find_matches(script_name, scripts)
+        if matches and len(matches) == 1:
+            rc = run_script(matches[0], extra_args)
+            sys.exit(rc)
+        else:
+            print(f"\033[1;31mError:\033[0m Unknown command or ambiguous script name '{sys.argv[1]}'.")
+            print_help()
+            sys.exit(1)
+
+if __name__ == "__main__":
+    main()

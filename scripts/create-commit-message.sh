@@ -1,6 +1,8 @@
 #!/bin/bash
+# Description: Generate AI-powered git commit messages using Ollama.
 ollama_executable="ollama"
 ollama_model="qwen3.5:9b"
+
 
 # Figure out the current working directory, if it has a .git directory, then we are in the root of the repository
 # If not, just fail and exit with "Not in a git repository" error message
@@ -29,9 +31,8 @@ fi
 
 # Prepare prompt
 prompt=$(cat <<EOF
-Generate a raw text commit message for the following diff.
-Keep commit message concise and to the point. Make the first line the title (100 characters or less), and the rest 
-the body (if necessary). Do not include any extra information or formatting, just the raw commit message
+Briefly summarize this git diff as a git commit message. No conversational text.
+
 $DIFF
 EOF
 )
