@@ -34,9 +34,9 @@ Track the implementation status and priorities of the Git helper utilities. Run 
   - *Description*: Queries the local LLM to describe what you were trying to accomplish with the current changes based on the diff.
   - *Testing*: Run `./autodo git-intent`
 
-- [ ] **`git-split`** (Standalone Splitter)
+- [x] **`git-split`** (Standalone Splitter)
   - *Description*: Standalone command to run the cluster-by-cluster staging and committing workflow directly from the shell.
-  - *Proposed Testing*: `./autodo git-split`
+  - *Testing*: Run `./autodo git-split`
 
 - [x] **`git-branch-name`** (Pipelineable Branch Name Generator)
   - *Description*: Generates a kebab-case branch name based on current changes and prints only the string to stdout (ideal for shell piping).
