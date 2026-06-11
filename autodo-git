@@ -267,24 +267,30 @@ def get_key():
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
     try:
-        tty.setraw(sys.stdin.fileno())
-        ch = sys.stdin.read(1)
-        if ch == '\x1b':
-            r, _, _ = select.select([sys.stdin], [], [], 0.05)
+        tty.setraw(fd)
+        # Use os.read(fd, 1) throughout — bypasses Python's TextIOWrapper
+        # buffering which can swallow/delay the 2nd and 3rd bytes of escape
+        # sequences when mixed with sys.stdin.read().
+        ch = os.read(fd, 1)
+        if ch == b'\x1b':
+            r, _, _ = select.select([fd], [], [], 0.1)
             if r:
-                ch2 = sys.stdin.read(1)
-                if ch2 == '[':
-                    ch3 = sys.stdin.read(1)
-                    if ch3 == 'A': return 'up'
-                    elif ch3 == 'B': return 'down'
-                    elif ch3 == 'C': return 'right'
-                    elif ch3 == 'D': return 'left'
-            return 'exit'
-        elif ch == '\r' or ch == '\n':
+                ch2 = os.read(fd, 1)
+                # CSI sequences: \x1b[ (most terminals)
+                # SS3 sequences: \x1bO  (application cursor mode: GNOME Term, Kitty, etc.)
+                if ch2 in (b'[', b'O'):
+                    ch3 = os.read(fd, 1)
+                    if ch3 == b'A': return 'up'
+                    elif ch3 == b'B': return 'down'
+                    elif ch3 == b'C': return 'right'
+                    elif ch3 == b'D': return 'left'
+            # Unrecognised escape — ignore so the TUI loop continues
+            return None
+        elif ch in (b'\r', b'\n'):
             return 'enter'
-        elif ch == 'q' or ch == 'Q':
+        elif ch in (b'q', b'Q'):
             return 'exit'
-        return ch
+        return ch.decode('utf-8', errors='replace')
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
