@@ -23,11 +23,16 @@ git add .
 # Get diff of the staged changes, and pass it to the ollama model to generate a commit message
 DIFF=$(git diff --cached)
 
-# If no changes are staged/staged, we don't need to generate a commit message
+# If no changes are staged, we don't need to generate a commit message
 if [ -z "$DIFF" ]; then
     echo "No changes to commit"
     exit 0
 fi
+
+# Output the staged files
+echo -e "\033[1;35mStaged files:\033[0m"
+git diff --cached --name-status | sed 's/^/  /'
+echo ""
 
 # Prepare prompt
 prompt=$(cat <<EOF
@@ -65,7 +70,21 @@ else
     commit_message=$(echo "$commit_message" | awk 'NF {p=1} p')
 fi
 
-# Get the generated commit message and use it to commit the changes (git commit -m "generated commit message")
-git commit -m "$commit_message"
+# Perform the commit
+commit_output=$(git commit -m "$commit_message" 2>&1)
+commit_status=$?
+
+if [ $commit_status -ne 0 ]; then
+    echo -e "\033[1;31mError: Commit failed.\033[0m" >&2
+    echo "$commit_output" >&2
+    exit $commit_status
+fi
+
+# Get the new commit hash
+commit_hash=$(git rev-parse --short HEAD)
+
+echo -e "\033[1;32mCommit successful!\033[0m"
+echo -e "\033[1;36mHash:\033[0m $commit_hash"
+echo -e "\033[1;36mMessage:\033[0m\n$commit_message"
 
 

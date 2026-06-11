@@ -53,9 +53,3 @@ Track the implementation status and priorities of the Git helper utilities. Run 
 - [ ] **`git-scope`** (Conventional Commit Helper)
   - *Description*: Analyzes changes to suggest conventional commit scopes/types (e.g. `feat`, `fix`, `docs`).
   - *Proposed Testing*: `./autodo git-scope`
-
-- [ ] **`git-stash-smart`** (Decided to skip/merge into `git-suggest`)
-  - *Description*: Evaluates whether to stash based on workspace clutter.
-  
-- [ ] **`git-context`** (Decided to skip/merge into `git-suggest`)
-  - *Description*: Summarizes repo state in human language.
