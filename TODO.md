@@ -14,9 +14,9 @@ Track the implementation status and priorities of the Git helper utilities. Run 
 
 ## High Priority
 
-- [ ] **`git-review`** (AI Code Review)
+- [x] **`git-review`** (AI Code Review)
   - *Description*: Runs local AI analysis on the current diff to inspect code quality, detect security risks/secrets, find debug leftovers, and suggest refactors.
-  - *Proposed Testing*: `./autodo git-review`
+  - *Testing*: Run `./autodo git-review` or `./autodo git-review <diff-arguments>`
 
 - [ ] **`git-undo-suggest`** (Risk-Free Git Undo)
   - *Description*: Analyzes repository state (unstaged, staged, local commits, pushed commits) and suggests the safest command to revert the last actions.
