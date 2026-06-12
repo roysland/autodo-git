@@ -246,11 +246,25 @@ def print_help():
 """
     print(help_text)
 
-def do_list(scripts):
+def do_list(scripts, as_json=False):
     if not scripts:
-        print("No scripts found in scripts/ directory.")
+        if as_json:
+            import json
+            print("[]")
+        else:
+            print("No scripts found in scripts/ directory.")
         return
         
+    if as_json:
+        import json
+        serializable_scripts = []
+        for s in scripts:
+            s_copy = s.copy()
+            s_copy["path"] = str(s["path"])
+            serializable_scripts.append(s_copy)
+        print(json.dumps(serializable_scripts, indent=2))
+        return
+
     print(f"\033[1;35m{'SCRIPT NAME':<25} {'TYPE':<8} {'DESCRIPTION'}\033[0m")
     print(f"\033[1;35m{'-'*25:<25} {'-'*8:<8} {'-'*40}\033[0m")
     for s in scripts:
@@ -389,7 +403,8 @@ def main():
     if cmd in ["help", "-h", "--help"]:
         print_help()
     elif cmd == "list":
-        do_list(scripts)
+        as_json = len(sys.argv) > 2 and sys.argv[2] == "--json"
+        do_list(scripts, as_json=as_json)
     elif cmd == "run":
         if len(sys.argv) < 3:
             print("\033[1;31mError:\033[0m Script name required for 'run' command.")
