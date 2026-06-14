@@ -112,11 +112,8 @@ def get_ollama_model():
 
     preferred = [
         "qwen2.5-coder:7b",
-        "qwen3.5:9b",
-        "llama3.2:3b",
-        "phi4-mini:latest",
-        "smollm2:1.7b",
-        "phi3:3.8b"
+        "deepseek-coder:6.7b",
+        "kimi-k2.7-code:cloud"
     ]
     
     for p in preferred:
@@ -128,7 +125,7 @@ def get_ollama_model():
         if "embed" not in m:
             return m
             
-    return "qwen3.5:9b"
+    return "qwen2.5-coder:7b"
 
 def query_ollama(model, prompt):
     url = "http://localhost:11434/api/generate"
